@@ -1,4 +1,4 @@
-### Nowo - Desktop application
+# Nowo - Desktop application
 
 ## Install
 

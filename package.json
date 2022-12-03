@@ -181,8 +181,8 @@
     "webpack-merge": "^5.8.0"
   },
   "build": {
-    "productName": "ElectronReact",
-    "appId": "org.erb.ElectronReact",
+    "productName": "Nowo",
+    "appId": "hulk.pham.org",
     "asar": true,
     "asarUnpack": "**\\*.{node,dll}",
     "files": [

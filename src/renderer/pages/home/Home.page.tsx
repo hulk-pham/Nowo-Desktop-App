@@ -14,22 +14,14 @@ const HomePage = () => {
         Welcom to Nowo
       </Heading>
       <div className="Hello">
-        <a href="#" target="_blank" rel="noreferrer">
-          <button type="button">
+        <Heading as="h3" size="lg">
+          <a href="#" target="_blank" rel="noreferrer">
             <span role="img" aria-label="books">
               📚
             </span>
-            Read our docs
-          </button>
-        </a>
-        <a href="#" target="_blank" rel="noreferrer">
-          <button type="button">
-            <span role="img" aria-label="folded hands">
-              🙏
-            </span>
-            Donate
-          </button>
-        </a>
+            An Desktop App
+          </a>
+        </Heading>
       </div>
     </Box>
   );
