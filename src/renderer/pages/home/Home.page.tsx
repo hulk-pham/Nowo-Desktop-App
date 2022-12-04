@@ -44,7 +44,7 @@ const HomePage = () => {
       <Heading as="h1" size="xl" noOfLines={1} mb="4rem">
         Welcome to Nowo
       </Heading>
-      <div className="Hello">
+      <div className="Home">
         <Heading as="h3" size="md">
           <span role="img" aria-label="books">
             📚
