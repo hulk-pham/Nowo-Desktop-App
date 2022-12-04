@@ -1,5 +1,15 @@
 # Nowo - Desktop application
 
+![Screenshot](./assets/screenshot-1.png)
+
+
+## Feature
+- Electron.js
+- Typescript
+- Charka UI
+- Zustand
+
+
 ## Install
 
 Install dependencies:
