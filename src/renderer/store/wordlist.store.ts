@@ -2,30 +2,51 @@ import dictionaryService from 'renderer/services/dictionany.service';
 import { Word } from 'renderer/types/Word.type';
 import create from 'zustand';
 import { persist } from 'zustand/middleware';
+import useToastStore from './toast.store';
 
-export type WordlistState = {
+export interface WordlistState {
   words: Word[];
-};
+  fetchAndAdd: (text: string, id: number) => void;
+  addWord: (newWord: Word) => void;
+  editWord: (wordId: number, wordData: Word) => void;
+  removeWord: (id: number) => void;
+  removeAllWord: () => void;
+}
 
-const useWordlistStore = create(
+const useWordlistStore = create<WordlistState>()(
   persist(
     (set) => ({
       words: [],
       fetchAndAdd: async (text: string, id: number) => {
-        const wordData = await dictionaryService.getDefinition(text);
-        console.log(wordData);
+        try {
+          const wordData = await dictionaryService.getDefinition(text);
 
-        const engDefine =
-          wordData?.[0]?.meanings?.[0]?.definitions?.[0]?.definition;
-        const newWord: Word = {
-          id,
-          text,
-          engDefine,
-        };
-        set((state: WordlistState) => ({
-          ...state,
-          words: [newWord, ...state.words],
-        }));
+          const engDefine =
+            wordData?.[0]?.meanings?.[0]?.definitions?.[0]?.definition;
+          const phoneticHasVideo = wordData?.[0]?.phonetics?.find(
+            (e: any) => e.audio
+          );
+          const phonetic = phoneticHasVideo || wordData?.[0]?.phonetics?.[0];
+          const newWord: Word = {
+            id,
+            text,
+            engDefine,
+            phonetic: phonetic.text,
+            audio: phonetic.audio,
+          };
+          set((state: WordlistState) => ({
+            ...state,
+            words: [newWord, ...state.words],
+          }));
+        } catch (error) {
+          useToastStore.setState({
+            toastData: {
+              title: (error as any).response?.data?.title,
+              description: (error as any).response?.data?.message,
+              status: 'error',
+            },
+          });
+        }
       },
       addWord: (newWord: Word) =>
         set((state: WordlistState) => ({

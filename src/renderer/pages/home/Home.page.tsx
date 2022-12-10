@@ -1,23 +1,27 @@
-import { DeleteIcon } from '@chakra-ui/icons';
+import { DeleteIcon, Icon } from '@chakra-ui/icons';
 import {
-    Box,
-    Button, Heading,
-    Input,
-    ListItem,
-    Text,
-    UnorderedList
+  Box,
+  Button,
+  Heading,
+  Input,
+  ListItem,
+  Text,
+  UnorderedList,
 } from '@chakra-ui/react';
 import { useState } from 'react';
+import { FiVolume2 } from 'react-icons/fi';
+import List from 'renderer/components/libs/List.comp';
 import useWordlistStore from 'renderer/store/wordlist.store';
 import { Word } from 'renderer/types/Word.type';
 
 let id = 1;
 const HomePage = () => {
-  const [words, fetchAndAddWord, removeWord] = useWordlistStore((state: any) => [
+  const [words, fetchAndAddWord, removeWord] = useWordlistStore((state) => [
     state.words,
     state.fetchAndAdd,
     state.removeWord,
   ]);
+
   const [newWord, setNewWord] = useState('');
   const handleChange = (event: any) => setNewWord(event.target.value);
   const handleEnter = (event: any) => {
@@ -30,6 +34,13 @@ const HomePage = () => {
   const handleAddWord = () => {
     fetchAndAddWord(newWord, id++);
     setNewWord('');
+  };
+
+  const playAudio = (word: Word) => {
+    if (word.audio) {
+      var audio = new Audio(word.audio);
+      audio.play();
+    }
   };
 
   return (
@@ -63,29 +74,45 @@ const HomePage = () => {
         </Box>
 
         <UnorderedList mt="1rem" w="80vw">
-          {(words as Word[]).map((word) => (
-            <ListItem>
-              <Box display="flex" alignItems="center">
-                <Box>
-                  <Text fontSize="sm" fontWeight="bold">
-                    {word.text}
-                  </Text>
-                  <Text fontSize="sm">
-                    {word.engDefine}
-                  </Text>
+          <List
+            data={words}
+            renderFunc={(word) => (
+              <ListItem key={word.id}>
+                <Box display="flex" alignItems="center">
+                  <Box>
+                    <Text fontSize="sm" fontWeight="bold">
+                      <Text display="inline">{word.text}</Text>
+                      <Text display="inline" ml="4">
+                        {word.phonetic}
+                      </Text>
+                      <Button
+                        display="inline-block"
+                        size="xs"
+                        colorScheme="teal"
+                        variant="ghost"
+                        ml="0.5"
+                        onClick={() => {
+                          playAudio(word);
+                        }}
+                      >
+                        <Icon as={FiVolume2} />
+                      </Button>
+                    </Text>
+                    <Text fontSize="sm">{word.engDefine}</Text>
+                  </Box>
+                  <Button
+                    size="xs"
+                    colorScheme="teal"
+                    variant="ghost"
+                    ml="0.5"
+                    onClick={() => removeWord(word.id)}
+                  >
+                    <DeleteIcon />
+                  </Button>
                 </Box>
-                <Button
-                  size="xs"
-                  colorScheme="teal"
-                  variant="ghost"
-                  ml="0.5"
-                  onClick={() => removeWord(word.id)}
-                >
-                  <DeleteIcon />
-                </Button>
-              </Box>
-            </ListItem>
-          ))}
+              </ListItem>
+            )}
+          />
         </UnorderedList>
       </div>
     </Box>
