@@ -1,0 +1,9 @@
+body {
+  background-color: transparent !important;
+  background: transparent !important;
+  border: 1px solid grey;
+}
+
+button {
+  -webkit-app-region: no-drag;
+}

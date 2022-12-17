@@ -9,7 +9,7 @@ import {
   UnorderedList,
 } from '@chakra-ui/react';
 import { useState } from 'react';
-import { FiVolume2 } from 'react-icons/fi';
+import { FiCamera, FiVolume2 } from 'react-icons/fi';
 import List from 'renderer/components/libs/List.comp';
 import useWordlistStore from 'renderer/store/wordlist.store';
 import { Word } from 'renderer/types/Word.type';
@@ -31,6 +31,68 @@ const HomePage = () => {
       }
     }
   };
+
+  const onSnipClick = async () => {
+    // const { desktopCapturer }: any = window.require('electron');
+    const { ipcRenderer, shell } = window.require('electron');
+    const { screen, getCurrentWindow } = window.require('@electron/remote');
+
+    console.log('screen', screen);
+
+    const desktopCapturer = {
+      getSources: (opts: any) =>
+        ipcRenderer.invoke('DESKTOP_CAPTURER_GET_SOURCES', opts),
+    };
+
+    const path = window.require('path');
+    const os = window.require('os');
+    const fs = window.require('fs');
+    const win = getCurrentWindow();
+    const windowRect = win.getBounds();
+
+    win.hide();
+
+    const screenSize = screen.getPrimaryDisplay().workAreaSize;
+    const maxDimension = Math.max(screenSize.width, screenSize.height);
+
+    // const screenSize = screen.getPrimaryDisplay().workAreaSize;
+
+    // const maxDimension = Math.max(screenSize.width, screenSize.height);
+
+    try {
+      const sources = await desktopCapturer.getSources({
+        types: ['screen'],
+        thumbnailSize: {
+          width: maxDimension * window.devicePixelRatio,
+          height: maxDimension * window.devicePixelRatio,
+        },
+      });
+      const entireScreenSource = sources.find(
+        (source: any) => source.name === 'Entire screen'
+      );
+
+      if (entireScreenSource) {
+        const outputPath = path.join(os.tmpdir(), 'screenshot.png');
+        const image = entireScreenSource.thumbnail
+          .resize({
+            width: screenSize.width,
+            height: screenSize.height,
+          })
+          .crop(windowRect)
+          .toPNG();
+
+        fs.writeFile(outputPath, image, (err: any) => {
+          win.show();
+
+          if (err) return console.error(err);
+          shell.openExternal(`file://${outputPath}`);
+        });
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleAddWord = () => {
     fetchAndAddWord(newWord, id++);
     setNewWord('');
@@ -51,16 +113,21 @@ const HomePage = () => {
       display="flex"
       flexDirection={'column'}
       alignItems="center"
+      bg="white"
     >
-      <Heading as="h1" size="xl" noOfLines={1} mb="4rem">
+      <Heading as="h1" size="xl" noOfLines={1} mb="4rem" bgColor={'white'}>
         Welcome to Nowo
       </Heading>
       <div className="Home">
-        <Heading as="h3" size="md">
+        <Heading
+          as="h3"
+          size="md"
+          display="flex"
+          justifyContent="space-between"
+        >
           <span role="img" aria-label="books">
-            📚
+            📚 List words
           </span>
-          List words
         </Heading>
         <Box mt="1rem" display="flex">
           <Input

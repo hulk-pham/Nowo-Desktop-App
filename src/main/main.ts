@@ -9,12 +9,23 @@
  * `./src/main.js` using webpack. This gives us some performance wins.
  */
 import path from 'path';
-import { app, BrowserWindow, shell, ipcMain } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  shell,
+  ipcMain,
+  desktopCapturer,
+  screen,
+  Tray,
+  Menu,
+} from 'electron';
 import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
+import * as remoteMain from '@electron/remote/main';
 
+remoteMain.initialize();
 class AppUpdater {
   constructor() {
     log.transports.file.level = 'info';
@@ -30,6 +41,10 @@ ipcMain.on('ipc-example', async (event, arg) => {
   console.log(msgTemplate(arg));
   event.reply('ipc-example', msgTemplate('pong'));
 });
+
+ipcMain.handle('DESKTOP_CAPTURER_GET_SOURCES', (event, opts) =>
+  desktopCapturer.getSources(opts)
+);
 
 if (process.env.NODE_ENV === 'production') {
   const sourceMapSupport = require('source-map-support');
@@ -56,29 +71,33 @@ const installExtensions = async () => {
     .catch(console.log);
 };
 
+const RESOURCES_PATH = app.isPackaged
+  ? path.join(process.resourcesPath, 'assets')
+  : path.join(__dirname, '../../assets');
+
+const getAssetPath = (...paths: string[]): string => {
+  return path.join(RESOURCES_PATH, ...paths);
+};
+
 const createWindow = async () => {
   if (isDebug) {
     await installExtensions();
   }
-
-  const RESOURCES_PATH = app.isPackaged
-    ? path.join(process.resourcesPath, 'assets')
-    : path.join(__dirname, '../../assets');
-
-  const getAssetPath = (...paths: string[]): string => {
-    return path.join(RESOURCES_PATH, ...paths);
-  };
-
   mainWindow = new BrowserWindow({
     show: false,
     width: 1024,
     height: 728,
     icon: getAssetPath('icon.png'),
     webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false,
       preload: app.isPackaged
         ? path.join(__dirname, 'preload.js')
         : path.join(__dirname, '../../.erb/dll/preload.js'),
     },
+    frame: false,
+    transparent: true,
+    titleBarStyle: 'customButtonsOnHover',
   });
 
   mainWindow.loadURL(resolveHtmlPath('index.html'));
@@ -107,9 +126,95 @@ const createWindow = async () => {
     return { action: 'deny' };
   });
 
+  remoteMain.enable(mainWindow.webContents);
+
   // Remove this if your app does not use auto updates
   // eslint-disable-next-line
   new AppUpdater();
+};
+
+const createTray = () => {
+  const iconPath = getAssetPath('icons/16x16.png');
+  const tray = new Tray(iconPath);
+
+  const onSnipClick = async () => {
+    const { ipcRenderer, shell } = require('electron');
+    const { screen, getCurrentWindow } = require('@electron/remote/main');
+
+    console.log('screen', screen);
+
+    const desktopCapturer = {
+      getSources: (opts: any) =>
+        ipcRenderer.invoke('DESKTOP_CAPTURER_GET_SOURCES', opts),
+    };
+
+    const path = require('path');
+    const os = require('os');
+    const fs = require('fs');
+    const win = getCurrentWindow();
+    const windowRect = win.getBounds();
+
+    win.hide();
+
+    const screenSize = screen.getPrimaryDisplay().workAreaSize;
+    const maxDimension = Math.max(screenSize.width, screenSize.height);
+
+    try {
+      const sources = await desktopCapturer.getSources({
+        types: ['screen'],
+        thumbnailSize: {
+          width: maxDimension * window.devicePixelRatio,
+          height: maxDimension * window.devicePixelRatio,
+        },
+      });
+      const entireScreenSource = sources.find(
+        (source: any) => source.name === 'Entire screen'
+      );
+
+      if (entireScreenSource) {
+        const outputPath = path.join(os.tmpdir(), 'screenshot.png');
+        const image = entireScreenSource.thumbnail
+          .resize({
+            width: screenSize.width,
+            height: screenSize.height,
+          })
+          .crop(windowRect)
+          .toPNG();
+
+        fs.writeFile(outputPath, image, (err: any) => {
+          win.show();
+
+          if (err) return console.error(err);
+          shell.openExternal(`file://${outputPath}`);
+        });
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: 'Screenshot Word',
+      type: 'normal',
+      click() {
+        onSnipClick();
+      },
+    },
+    {
+      type: 'separator',
+    },
+    {
+      label: 'Quit',
+      type: 'normal',
+      click() {
+        app.quit();
+      },
+    },
+  ]);
+
+  tray.setToolTip('Screenshot Snipping Tool');
+  tray.setContextMenu(contextMenu);
 };
 
 /**
@@ -128,6 +233,7 @@ app
   .whenReady()
   .then(() => {
     createWindow();
+    createTray();
     app.on('activate', () => {
       // On macOS it's common to re-create a window in the app when the
       // dock icon is clicked and there are no other windows open.
